@@ -65,10 +65,14 @@ services:
       context: ./evidently
       dockerfile: Dockerfile
     container_name: evidently_service
+    restart: unless-stopped
     image: evidently_image
     depends_on:
       - api
     command: ["python", "generate_reports.py"]
+    networks:
+      example-network:
+        ipv4_address: 172.16.238.14
   
 networks:
   example-network:
