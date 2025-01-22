@@ -1,0 +1,6 @@
+{
+  "metrics": {
+    "data_drift": "No significant drift detected.",
+    "data_quality": "All features meet quality thresholds."
+  }
+}
