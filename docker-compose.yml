@@ -1,23 +1,80 @@
-version: '3.8'
+version: "3.8"
+
 services:
   api:
-    build: ./api
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    container_name: api_service
+    image: iris_api
     ports:
       - "8000:8000"
-    env_file:
-      - ./api/.env
+    networks:
+      example-network:
+        ipv4_address: 172.16.238.10
+
   prometheus:
-    image: prom/prometheus
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    build:
+      context: ./prometheus
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    container_name: prometheus_service
+    image: custom_prometheus
     ports:
       - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    networks:
+      example-network:
+        ipv4_address: 172.16.238.11
+
   grafana:
     image: grafana/grafana
-    volumes:
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    container_name: grafana_service
+    restart: unless-stopped
+    depends_on:
+      - prometheus
     ports:
       - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/dashboards/:/var/lib/grafana/dashboards
+    networks:
+      example-network:
+        ipv4_address: 172.16.238.12
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    command:
+      - "--path.rootfs=/host"
+    restart: unless-stopped
+    networks:
+      example-network:
+        ipv4_address: 172.16.238.13
+
   evidently:
-    build: ./evidently
+    build:
+      context: ./evidently
+      dockerfile: Dockerfile
+    container_name: evidently_service
+    image: evidently_image
+    depends_on:
+      - api
     command: ["python", "generate_reports.py"]
+  
+networks:
+  example-network:
+    name: example-network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24
